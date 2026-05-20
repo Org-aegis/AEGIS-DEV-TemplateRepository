@@ -15,6 +15,7 @@
 # ・テンプレートパス（vars）を変数で置換し配信先を決定
 # ・.github/.deployconfig.json の設定に基づき、配信先をクリーンアップ
 # ・.github/.deployconfig.json の設定に基づき、資材を配信先へ同期（rsync）
+# ・初回配信時のみ、配送先ルートに .Rprofile.org を作成し、2回目以降は既存ファイルを保持
 # ・エラー時は即時中断し、ログはActionsで確認可能
 # ・成功時に checkout 資材とログをクリーンアップ
 # ================================================
@@ -326,7 +327,7 @@ jobs:
           done
 
           # rsyncの詳細な進捗はログファイルのみに出力する
-          if ! rsync -av --progress "${rsync_exclude_opts[@]}" checkoutDir/ "$DEST_PATH/" >> "$LOG_FILE" 2>&1; then
+          if ! rsync -rv --progress "${rsync_exclude_opts[@]}" checkoutDir/ "$DEST_PATH/" >> "$LOG_FILE" 2>&1; then
             echo "Error: Failed to copy files with rsync." | tee -a "$LOG_FILE"
             echo "▼▼▼▼▼▼▼▼▼▼ Log Details ▼▼▼▼▼▼▼▼▼▼"
             cat "$LOG_FILE"
@@ -334,6 +335,50 @@ jobs:
             exit 1
           fi
           echo "Copied files to $DEST_PATH." >> "$LOG_FILE"
+
+          # デフォルトACLのmaskを動的に取得
+          DEST_MASK=$(getfacl "$DEST_PATH" 2>/dev/null | awk -F: '$1=="default" && $2=="mask" {print $NF; exit}')
+          DEST_MASK=$(echo "$DEST_MASK" | tr -d '[:space:]')
+          echo "Detected default ACL mask on destination: '${DEST_MASK:-<empty>}'" | tee -a "$LOG_FILE"
+
+          # DESTのデフォルトACL maskが未設定の場合はmask再設定しない
+          if [[ -n "$DEST_MASK" ]]; then
+
+            # ファイル用mask：ディレクトリmaskから実行権限(x)を除去 例) rwx → rw-
+            FILE_MASK=$(echo "$DEST_MASK" | tr 'x' '-')
+
+            # ディレクトリのACL maskを再設定
+            #   -mindepth 1       : $DEST_PATH自身は除外（設定済みのため）
+            #   m::${DEST_MASK}   : access maskを設定        例) m::rwx
+            #   d:m::${DEST_MASK} : default maskも同時設定   例) d:m::rwx
+            #                       （将来この配下に作成される子要素へ正しく継承させるため）
+            # ファイルのACL maskを再設定
+            #   m::${FILE_MASK}   : access maskのみ設定      例) m::rw-
+            #                       （ファイルにdefault ACLは存在しないため不要）
+            #   -r (--no-run-if-empty)：入力が空の場合、コマンドを実行しない
+            # どちらかが失敗した場合はエラー処理へ
+            if ! find "$DEST_PATH" -mindepth 1 -type d -print0 \
+                   | xargs -0 -r setfacl -m "m::${DEST_MASK},d:m::${DEST_MASK}" \
+              || ! find "$DEST_PATH" -mindepth 1 -type f -print0 \
+                   | xargs -0 -r setfacl -m "m::${FILE_MASK}"; then
+              echo "Error: failed to change mask." >> "$LOG_FILE"
+              cat "$LOG_FILE"
+              echo "▲▲▲▲▲▲▲▲▲▲ End of Log Details ▲▲▲▲▲▲▲▲▲▲"
+              exit 1
+            fi
+          else
+            echo "Skipped setting ACL mask: '$DEST_PATH' has no default ACL" | tee -a "$LOG_FILE"
+          fi
+          echo "Succeeded to update mask(rwx/rw-) for deployed directories and files under $DEST_PATH." >> "$LOG_FILE"
+
+          # 6. 初回配信時のみ、配送先ルートに .Rprofile.org を作成する
+          #    二回目以降の配信では既存ファイルを維持し、再作成しない
+          if [ ! -f "$DEST_PATH/.Rprofile.org" ]; then
+            cp /mnt/sys/init/R/.Rprofile "$DEST_PATH/.Rprofile.org"
+            echo "Created initial .Rprofile.org in destination root." | tee -a "$LOG_FILE"
+          else
+            echo "Skipped creating .Rprofile.org because it already exists." | tee -a "$LOG_FILE"
+          fi
 
           END_TIME=$(date +'%Y-%m-%d %H:%M:%S')
           echo "End Time: $END_TIME" >> "$LOG_FILE"
@@ -345,9 +390,9 @@ jobs:
           echo "▲▲▲▲▲▲▲▲▲▲ End of Log Details ▲▲▲▲▲▲▲▲▲▲"
           echo " "
 
-          # 6. checkoutDirのクリーンアップ
+          # 7. checkoutDirのクリーンアップ
           echo "Cleaning up checkoutDir..."
           rm -rf checkoutDir
 
-          # 7. ログファイルの削除
+          # 8. ログファイルの削除
           rm "$LOG_FILE"
