@@ -4,7 +4,7 @@
     "dirs": ["log"]
   },
   "exclude_on_copy": {
-    "files": [],
+    "files": ["qc_*.R"],
     "dirs": [".githooks", ".github", ".git"]
   }
 }

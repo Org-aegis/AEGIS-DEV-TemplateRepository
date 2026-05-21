@@ -1,4 +1,5 @@
 ## PR タイトル(必須)
+
 <!-- 下記のフォーマットに合わせて修正し、PRのタイトル（Subject）として使用してください -->
 
 merge([source]->[target]): [summary]
@@ -33,7 +34,7 @@ merge(feature/login-timeout->dev): ログインタイムアウト修正
 **補足ルール**
 
 - PR タイトルは Merge Commit の先頭行として使用されます
-- 規約に一致しない PR は GitHub Actions によりマージ不可となります
+- PR タイトルは規約に沿って設定してください（管理・追跡をしやすくするため）
 - summary は日本語 / 英語どちらでも可
 
 </details>
@@ -45,13 +46,9 @@ merge(feature/login-timeout->dev): ログインタイムアウト修正
 
 `main` にマージする前に、以下のいずれか **1 つだけ** のラベルを付与してください。
 
-- `release:major`  
-  互換性のない変更・大きな仕様変更を含む場合
-- `release:minor`  
-  後方互換性のある機能追加・改善の場合
-- `release:patch`  
-  バグ修正や小さな修正のみの場合
-- `no-release`  
+- `AEGIS: release`  
+  配信（リリース）を行う変更の場合
+- `AEGIS: no-release`  
   配信（リリース）不要な変更の場合  
   （例：ドキュメント更新、CI 設定変更など）
 

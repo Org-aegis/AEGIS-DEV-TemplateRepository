@@ -5,7 +5,7 @@ branch=$(git rev-parse --abbrev-ref HEAD)
 
 # main, qaブランチではmerge commitできません。
 if [ "$branch" = "main" ] || [ "$branch" = "qa" ]; then
-  echo "❌ Merge commits are prohibited on the $branch branch."
+  echo "❌ Merge commits are prohibited on the $branch branch. Please create a pull request instead."
   exit 1
 fi
 
