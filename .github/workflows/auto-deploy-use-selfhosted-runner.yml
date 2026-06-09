@@ -49,6 +49,7 @@ jobs:
         run: |
           HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2026-03-10" \
             "https://api.github.com/repos/${{ github.repository }}/properties/values")
 
