@@ -75,14 +75,14 @@ jobs:
           # jq -r で生文字列として取得
           URLS=$(jq -r '.R.Repositories[].URL' renv.lock)
 
-          for URL in $URLS; do
+          while IFS= read -r URL; do
             if [[ "$URL" != "$ALLOWED_PREFIX"* ]]; then
               echo "::error::Invalid repository URL detected: $URL"
               echo "::error::URL must start with $ALLOWED_PREFIX"
               exit 1
             fi
             echo "URL check OK: $URL"
-          done
+          done <<< "$URLS"
 
           echo "✅ All URLs are valid."
 

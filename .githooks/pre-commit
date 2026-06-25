@@ -14,10 +14,10 @@ fi
 # =======================================================
 echo "🔍 Checking renv.lock..."
 
-# 1. renv.lock がステージングエリアに存在するか確認
-if ! git rev-parse --verify -q :renv.lock > /dev/null; then
-  # ファイルが存在しない場合はチェック対象外として正常終了
-  echo " renv.lock not found in the staging area, skipping check."
+# 1. renv.lock が今回のコミットで追加/更新されているか確認
+if ! git diff --cached --name-only --diff-filter=ACMR -- renv.lock | grep -qx 'renv.lock'; then
+  # ファイルが存在しない/変更がない/削除された場合はチェック対象外として正常終了
+  echo " renv.lock not added or modified in this commit, skipping check."
   exit 0
 fi
 
