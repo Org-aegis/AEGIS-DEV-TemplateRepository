@@ -5,9 +5,10 @@ permissions:
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, synchronize, edited]
     branches:
-      - qa # qaブランチへのPRのみトリガー
+      - qa # qaブランチへのPRでトリガー
+      - main # mainブランチへのPRでトリガー
 
 concurrency:
   group: check-renv-lock-${{ github.event.pull_request.number }}
@@ -17,7 +18,7 @@ jobs:
   check-renv-lock:
     name: actions/check-renv-lock
     runs-on: ubuntu-latest
-    # dev → qa のPRのみ実行、それ以外はスキップ
+    # dev → qa/main のPRのみ実行、それ以外はスキップ
     if: github.event.pull_request.head.ref == 'dev'
 
     steps:
